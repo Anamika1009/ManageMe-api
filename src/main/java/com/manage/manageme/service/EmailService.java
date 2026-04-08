@@ -10,7 +10,7 @@ import org.springframework.stereotype.Service;
 @RequiredArgsConstructor
 public class EmailService {
 
-    @Value("${spring.mail.properties.mail.smtp.from}")
+    @Value("${spring.mail.from}")
     private String fromEmail;
 
     private final JavaMailSender mailSender;
