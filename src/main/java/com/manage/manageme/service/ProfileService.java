@@ -45,7 +45,6 @@ public class ProfileService {
 
         // Send activation email
         String activationLink = activationURL + "/activate?token=" + newProfile.getActivationToken();
-
         String subject = "Activate your Money Management profile";
 
         String body = "Click on the following link to activate your profile:\n"
@@ -63,12 +62,12 @@ public class ProfileService {
 
         return ProfileEntity.builder()
                 .id(profileDTO.getId())
-                .FullName(profileDTO.getFullname())
+                .FullName(profileDTO.getFullName())
                 .email(profileDTO.getEmail())
                 .password(passwordEncoder.encode(profileDTO.getPassword())) // This will encode the password before saving,
                 // encode means to convert the password into a secure format that cannot be easily reversed,
                 // ensuring that even if the database is compromised, the actual passwords remain protected.
-                .profileImageUrl(profileDTO.getProfileImageeUrl())
+                .profileImageUrl(profileDTO.getProfileImageUrl())
                 .createdAt(profileDTO.getCreatedAt())
                 .updatedAt(profileDTO.getUpdatedAt())
                 .build();
@@ -83,9 +82,9 @@ public class ProfileService {
 
         return ProfileDTO.builder()
                 .id(profileEntity.getId())
-                .fullname(profileEntity.getFullName())
+                .fullName(profileEntity.getFullName())
                 .email(profileEntity.getEmail())
-                .profileImageeUrl(profileEntity.getProfileImageUrl())
+                .profileImageUrl(profileEntity.getProfileImageUrl())
                 .createdAt(profileEntity.getCreatedAt())
                 .updatedAt(profileEntity.getUpdatedAt())
                 .build();
@@ -131,9 +130,9 @@ public class ProfileService {
         }
         return ProfileDTO.builder()
                 .id(currentUser.getId())
-                .fullname(currentUser.getFullName())
+                .fullName(currentUser.getFullName())
                 .email(currentUser.getEmail())
-                .profileImageeUrl(currentUser.getProfileImageUrl())
+                .profileImageUrl(currentUser.getProfileImageUrl())
                 .createdAt(currentUser.getCreatedAt())
                 .updatedAt(currentUser.getUpdatedAt())
                 .build();

@@ -1,5 +1,5 @@
 package com.manage.manageme.dto;
-// DTO pakage is used to transfer data between the client and the server,
+// DTO package is used to transfer data between the client and the server,
 // it is a simple Java class that contains only fields and getters and setters,
 // it does not contain any business logic,
 // it is used to encapsulate the data that we want to transfer between the client and the server,
@@ -16,10 +16,10 @@ import java.time.LocalDateTime;
 @AllArgsConstructor
 public class ProfileDTO {
     private Long id;
-    private String fullname;
+    private String fullName;
     private String email;
     private String password;
-    private String profileImageeUrl;
+    private String profileImageUrl;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 }
