@@ -1,11 +1,7 @@
 package com.manage.manageme.dto;
-// DTO package is used to transfer data between the client and the server,
-// it is a simple Java class that contains only fields and getters and setters,
-// it does not contain any business logic,
-// it is used to encapsulate the data that we want to transfer between the client and the server,
-// and it is also used to validate the data that we receive from the client before we process it in the service layer,
-// for example, we can use DTOs to validate the email format, password strength, etc.
-// before we save the profile to the database.
+
+import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.*;
 
 import java.time.LocalDateTime;
@@ -14,12 +10,23 @@ import java.time.LocalDateTime;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
+
+@JsonInclude(JsonInclude.Include.NON_NULL)
 public class ProfileDTO {
+
     private Long id;
+
+    // Full name is required during update and registration
     private String fullName;
+
     private String email;
+
+    @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
     private String password;
+
     private String profileImageUrl;
+
     private LocalDateTime createdAt;
+
     private LocalDateTime updatedAt;
 }
