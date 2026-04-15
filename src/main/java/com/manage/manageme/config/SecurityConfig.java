@@ -40,21 +40,19 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity httpSecurity) throws Exception {
         httpSecurity
-                // 1. Enable CORS with our custom configuration
                 .cors(Customizer.withDefaults())
-                // 2. Disable CSRF (since we use JWT and Stateless sessions)
                 .csrf(AbstractHttpConfigurer::disable)
                 .authorizeHttpRequests(auth -> auth
-                        // 3. ALLOW OPTIONS: Very important for CORS preflight (PUT/DELETE)
+                        // 1. Preflight requests (OPTIONS) ko hamesha allow karein
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
-                        // 4. PUBLIC ENDPOINTS: Base routes that don't need a token
-                        .requestMatchers("/api/v1.0/status", "/api/v1.0/health", "/api/v1.0/register", "/api/v1.0/activate", "/api/v1.0/login", "/error").permitAll()
-                        // 5. PROTECTED ENDPOINTS: Everything else (like /update-profile) needs JWT
+
+                        // 2. PUBLIC ENDPOINTS: Context-path (/api/v1.0) yahan likhne ki zaroorat NAHI hai
+                        .requestMatchers("/status", "/health", "/register", "/activate", "/login", "/error").permitAll()
+
+                        // 3. PROTECTED ENDPOINTS: Baaki sab authenticated honge
                         .anyRequest().authenticated()
                 )
-                // 6. STATELESS SESSION: No cookies, only JWT
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-                // 7. JWT FILTER: Run this before the default auth filter
                 .addFilterBefore(jwtRequestFilter, UsernamePasswordAuthenticationFilter.class);
 
         return httpSecurity.build();
@@ -64,22 +62,14 @@ public class SecurityConfig {
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
 
-        // Allow localhost and your Render frontend URL
         configuration.setAllowedOrigins(Arrays.asList(
                 "http://localhost:5173",
-                frontendUrl != null ? frontendUrl : "https://your-frontend-link.vercel.app"
+                frontendUrl != null ? frontendUrl : "*"
         ));
 
-        // ALLOW ALL METHODS: Critical for PUT (profile updates)
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"));
-
-        // ALLOW ALL HEADERS: Crucial for Authorization (Bearer Token)
         configuration.setAllowedHeaders(Arrays.asList("Authorization", "Content-Type", "Accept", "X-Requested-With", "Cache-Control"));
-
-        // Allow sending credentials (like cookies if ever needed, or just standard auth)
         configuration.setAllowCredentials(true);
-
-        // How long the browser should cache this CORS preflight response
         configuration.setMaxAge(3600L);
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
