@@ -11,12 +11,13 @@ import java.time.LocalDateTime;
 @NoArgsConstructor
 @AllArgsConstructor
 
-@JsonInclude(JsonInclude.Include.NON_NULL)
+@JsonInclude(JsonInclude.Include.ALWAYS)
 public class ProfileDTO {
 
     private Long id;
 
     // Full name is required during update and registration
+    @JsonProperty("fullname")
     private String fullName;
 
     private String email;

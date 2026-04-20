@@ -23,7 +23,7 @@ public class ProfileEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)   // this annotation tells Spring that the id field will be generated automatically by the database, and the strategy is IDENTITY, which means that the database will generate a unique value for the id field
     private Long id;
     @Column(name = "fullname")
-    private String FullName;
+    private String fullName;
     @Column(unique = true)
     private String email;
     private String password;
