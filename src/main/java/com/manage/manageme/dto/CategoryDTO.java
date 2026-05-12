@@ -16,6 +16,7 @@ public class CategoryDTO {
     private Long id;
     private Long profileId;
     private String name;
+    private String description;
     private String icon;
     private String type;
     private LocalDateTime createdAt;

@@ -50,6 +50,7 @@ public class CategoryService {
             throw new RuntimeException("Category with this name already exists");
         }
         category.setName(categoryDTO.getName());
+        category.setDescription(categoryDTO.getDescription());
         category.setIcon(categoryDTO.getIcon());
         category.setType(categoryDTO.getType());
         CategoryEntity updatedCategory = categoryRepository.save(category);
@@ -60,6 +61,7 @@ public class CategoryService {
     private CategoryEntity toEntity (CategoryDTO categoryDTO, ProfileEntity profile){
         return CategoryEntity.builder()
                 .name(categoryDTO.getName())
+                .description(categoryDTO.getDescription())
                 .icon(categoryDTO.getIcon())
                 .type(categoryDTO.getType())
                 .profile(profile)
@@ -70,6 +72,7 @@ public class CategoryService {
                 .id(categoryEntity.getId())
                 .profileId(categoryEntity.getProfile()!=null? categoryEntity.getProfile().getId(): null)
                 .name(categoryEntity.getName())
+                .description(categoryEntity.getDescription())
                 .icon(categoryEntity.getIcon())
                 .type(categoryEntity.getType())
                 .createdAt(categoryEntity.getCreatedAt())
