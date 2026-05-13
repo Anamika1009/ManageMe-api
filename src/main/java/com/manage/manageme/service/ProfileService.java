@@ -7,12 +7,15 @@ import com.manage.manageme.repository.ProfileRepository;
 import com.manage.manageme.util.JwtUtil;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpStatus;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.util.Map;
 import java.util.UUID;
@@ -30,9 +33,7 @@ public class ProfileService {
     @Value("${app.activation.url}")
     private String activationURL;
 
-    /**
-     * Update Profile: Full Name aur Profile Image badalne ke liye
-     */
+    @Transactional
     public ProfileDTO updateProfile(ProfileDTO updateData) {
         ProfileEntity existingProfile = getCurrentProfile();
 
@@ -48,26 +49,25 @@ public class ProfileService {
         return toDTO(savedProfile);
     }
 
-    /**
-     * NEW: Update Password logic
-     * Purane password ko check karke naya password encode karke save karta hai.
-     */
+    @Transactional
     public void updatePassword(String currentPassword, String newPassword) {
-        // 1. Logged-in user nikalein
         ProfileEntity user = getCurrentProfile();
 
-        // 2. Check karein ki purana password sahi hai ya nahi
         if (!passwordEncoder.matches(currentPassword, user.getPassword())) {
-            throw new RuntimeException("Current password is incorrect");
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Current password is incorrect");
         }
 
-        // 3. Naye password ko encode karke save karein
         user.setPassword(passwordEncoder.encode(newPassword));
         profileRepository.save(user);
     }
 
-    // Register new profile
+    @Transactional
     public ProfileDTO registerProfile(ProfileDTO profileDTO) {
+        // ✅ Check if email already exists
+        if (profileRepository.findByEmail(profileDTO.getEmail()).isPresent()) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Email already registered");
+        }
+
         ProfileEntity newProfile = toEntity(profileDTO);
         newProfile.setActivationToken(UUID.randomUUID().toString());
         newProfile = profileRepository.save(newProfile);
@@ -80,7 +80,67 @@ public class ProfileService {
         return toDTO(newProfile);
     }
 
-    // Convert DTO → Entity
+    @Transactional
+    public boolean activateProfile(String activationToken) {
+        return profileRepository.findByActivationToken(activationToken)
+                .map(profile -> {
+                    profile.setActivationToken(null);
+                    profile.setIsActive(true);
+                    profileRepository.save(profile);
+                    return true;
+                })
+                .orElse(false);
+    }
+
+    @Transactional(readOnly = true)
+    public boolean isAccountActive(String email) {
+        return profileRepository.findByEmail(email)
+                .map(ProfileEntity::getIsActive)
+                .orElse(false);
+    }
+
+    @Transactional(readOnly = true)
+    public ProfileEntity getCurrentProfile() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        return profileRepository.findByEmail(authentication.getName())
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND,
+                        "Profile not found for email: " + authentication.getName()
+                ));
+    }
+
+    @Transactional(readOnly = true)
+    public ProfileDTO getPublicProfile(String email) {
+        ProfileEntity currentUser;
+        if (email == null) {
+            currentUser = getCurrentProfile();
+        } else {
+            currentUser = profileRepository.findByEmail(email)
+                    .orElseThrow(() -> new ResponseStatusException(
+                            HttpStatus.NOT_FOUND,
+                            "Profile not found for email: " + email
+                    ));
+        }
+        return toDTO(currentUser);
+    }
+
+    @Transactional(readOnly = true)
+    public Map<String, Object> authenticateAndGenerateToken(AuthDTO authDTO) {
+        try {
+            authenticationManager.authenticate(
+                    new UsernamePasswordAuthenticationToken(authDTO.getEmail(), authDTO.getPassword())
+            );
+            String token = jwtUtil.generateToken(authDTO.getEmail());
+            return Map.of(
+                    "token", token,
+                    "user", getPublicProfile(authDTO.getEmail())
+            );
+        } catch (Exception e) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid email or password");
+        }
+    }
+
+    // Helpers
     public ProfileEntity toEntity(ProfileDTO profileDTO) {
         return ProfileEntity.builder()
                 .id(profileDTO.getId())
@@ -93,7 +153,6 @@ public class ProfileService {
                 .build();
     }
 
-    // Convert Entity → DTO
     public ProfileDTO toDTO(ProfileEntity profileEntity) {
         return ProfileDTO.builder()
                 .id(profileEntity.getId())
@@ -103,56 +162,5 @@ public class ProfileService {
                 .createdAt(profileEntity.getCreatedAt())
                 .updatedAt(profileEntity.getUpdatedAt())
                 .build();
-    }
-
-    // Activate profile
-    public boolean activateProfile(String activationToken) {
-        return profileRepository.findByActivationToken(activationToken)
-                .map(profile -> {
-                    profile.setActivationToken(null);
-                    profile.setIsActive(true);
-                    profileRepository.save(profile);
-                    return true;
-                })
-                .orElse(false);
-    }
-
-    // Check account status
-    public boolean isAccountActive(String email) {
-        return profileRepository.findByEmail(email)
-                .map(ProfileEntity::getIsActive)
-                .orElse(false);
-    }
-
-    // Get Logged-in User
-    public ProfileEntity getCurrentProfile(){
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        return profileRepository.findByEmail(authentication.getName())
-                .orElseThrow(() -> new RuntimeException("Profile not found for email: " + authentication.getName()));
-    }
-
-    public ProfileDTO getPublicProfile(String email) {
-        ProfileEntity currentUser = null;
-        if (email == null) {
-            currentUser = getCurrentProfile();
-        } else {
-            currentUser = profileRepository.findByEmail(email)
-                    .orElseThrow(() -> new RuntimeException("Profile not found for email: " + email));
-        }
-        return toDTO(currentUser);
-    }
-
-    // Login Logic
-    public Map<String, Object> authenticateAndGenerateToken(AuthDTO authDTO) {
-        try{
-            authenticationManager.authenticate(new UsernamePasswordAuthenticationToken(authDTO.getEmail(), authDTO.getPassword()));
-            String token = jwtUtil.generateToken(authDTO.getEmail());
-            return Map.of(
-                    "token", token,
-                    "user", getPublicProfile(authDTO.getEmail())
-            );
-        } catch(Exception e) {
-            throw new RuntimeException("Invalid email or password");
-        }
     }
 }

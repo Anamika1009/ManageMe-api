@@ -7,6 +7,7 @@ import com.manage.manageme.repository.CategoryRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
@@ -17,7 +18,7 @@ public class CategoryService {
     private final ProfileService profileService;
     private final CategoryRepository categoryRepository;
 
-    // Save category
+    @Transactional
     public CategoryDTO saveCategory(CategoryDTO categoryDTO) {
         ProfileEntity profile = profileService.getCurrentProfile();
         if (categoryRepository.existsByNameAndProfileId(categoryDTO.getName(), profile.getId())) {
@@ -28,28 +29,27 @@ public class CategoryService {
         return toDTO(savedCategory);
     }
 
-    // Get all categories for current profile
+    @Transactional(readOnly = true)
     public List<CategoryDTO> getCategoriesForCurrentProfile() {
         ProfileEntity profile = profileService.getCurrentProfile();
         List<CategoryEntity> categories = categoryRepository.findByProfileId(profile.getId());
         return categories.stream().map(this::toDTO).toList();
     }
 
-    // Get categories by type for current profile
+    @Transactional(readOnly = true)
     public List<CategoryDTO> getCategoriesByTypeForCurrentProfile(String type) {
         ProfileEntity profile = profileService.getCurrentProfile();
         List<CategoryEntity> entities = categoryRepository.findByTypeAndProfileId(type, profile.getId());
         return entities.stream().map(this::toDTO).toList();
     }
 
-    // Update category
+    @Transactional
     public CategoryDTO updateCategory(Long categoryId, CategoryDTO categoryDTO) {
         ProfileEntity profile = profileService.getCurrentProfile();
 
         CategoryEntity category = categoryRepository.findByIdAndProfileId(categoryId, profile.getId())
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Category not found"));
 
-        // ✅ Fixed: only check name conflict if the name actually changed
         boolean nameChanged = !category.getName().equalsIgnoreCase(categoryDTO.getName());
         if (nameChanged && categoryRepository.existsByNameAndProfileId(categoryDTO.getName(), profile.getId())) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Category with this name already exists");
@@ -64,7 +64,6 @@ public class CategoryService {
         return toDTO(updatedCategory);
     }
 
-    // Helpers
     private CategoryEntity toEntity(CategoryDTO categoryDTO, ProfileEntity profile) {
         return CategoryEntity.builder()
                 .name(categoryDTO.getName())
