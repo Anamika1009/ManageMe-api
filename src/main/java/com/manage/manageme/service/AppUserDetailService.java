@@ -8,11 +8,13 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Collections;
 
 @Service
 @RequiredArgsConstructor
+@Transactional
 public class AppUserDetailService implements UserDetailsService {
     private final ProfileRepository profileRepository;
     @Override
@@ -20,9 +22,9 @@ public class AppUserDetailService implements UserDetailsService {
         ProfileEntity existingProfile = profileRepository.findByEmail(email)
                 .orElseThrow(() -> new UsernameNotFoundException("User not found with email: " + email));
         return User.builder()
-            .username(existingProfile.getEmail())
-            .password(existingProfile.getPassword())
-            .authorities(Collections.emptyList())
-            .build();
+                .username(existingProfile.getEmail())
+                .password(existingProfile.getPassword())
+                .authorities(Collections.emptyList())
+                .build();
     }
 }

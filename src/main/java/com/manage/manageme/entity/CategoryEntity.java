@@ -1,5 +1,6 @@
 package com.manage.manageme.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
@@ -13,6 +14,7 @@ import java.time.LocalDateTime;
 @Entity
 @AllArgsConstructor
 @Table(name = "tbl_categories")
+@JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
 public class CategoryEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

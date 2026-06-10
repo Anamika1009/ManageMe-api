@@ -1,4 +1,5 @@
 package com.manage.manageme.entity;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
@@ -14,6 +15,7 @@ import java.time.LocalDateTime;
 @Data
 @Builder
 @Table(name = "tbl_incomes")
+@JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
 public class IncomeEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
