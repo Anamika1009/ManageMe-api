@@ -18,7 +18,9 @@ import java.util.List;
 import java.util.Map;
 
 @RestController
-@RequestMapping("/api/v1.0/reports") // FIXED: Mapped to /reports to isolate and eliminate 404 routing conflicts
+// application.properties ka context-path (/api/v1.0) iske aage automatic lag jayega.
+// Isliye yahan sirf "/reports" rakha hai taaki double URL loop na bane.
+@RequestMapping("/reports")
 @CrossOrigin(origins = "*")
 public class IncomeReportController {
 
@@ -35,10 +37,14 @@ public class IncomeReportController {
         this.profileService = profileService;
     }
 
-    // Handles layout download button mapping trigger pipeline
-    @GetMapping("/incomes/download") // Path structured clean: /api/v1.0/reports/incomes/download
+    /**
+     * URL target mapping: GET /api/v1.0/reports/incomes/download
+     * Excel sheet client device par download karne ke liye
+     */
+    @GetMapping("/incomes/download")
     public ResponseEntity<InputStreamResource> downloadIncomeReport() {
         try {
+            // Logged-in user ka current month ka data fetch karein
             List<IncomeDTO> dataList = incomeService.getCurrentMonthIncomesForCurrentUser();
             ByteArrayInputStream excelDataStream = excelService.generateIncomeExcelReport(dataList);
 
@@ -53,22 +59,28 @@ public class IncomeReportController {
         }
     }
 
-    // Handles the email submission button trigger endpoint pipeline
-    @PostMapping("/incomes/email") // Path structured clean: /api/v1.0/reports/incomes/email
+    /**
+     * URL target mapping: POST /api/v1.0/reports/incomes/email
+     * User ko registered email par Brevo REST API matrix ke throw attachment forward karne ke liye
+     */
+    @PostMapping("/incomes/email")
     public ResponseEntity<Map<String, String>> emailIncomeReport() {
         try {
-            // Logged-in user data dynamically fetch karein
+            // 1. Dynamic User Validation Profile context load karein
             ProfileEntity currentProfile = profileService.getCurrentProfile();
             String targetRecipientEmail = currentProfile.getEmail();
 
+            // 2. Data retrieve karke dynamic excel sheet taiyar karein
             List<IncomeDTO> dataList = incomeService.getCurrentMonthIncomesForCurrentUser();
             ByteArrayInputStream excelDataStream = excelService.generateIncomeExcelReport(dataList);
 
             String fileName = "Income_Report_" + LocalDate.now() + ".xlsx";
             String emailSubject = "Financial Inflow Report Export Summary Matrix";
+
+            // Personalized dynamic email body text
             String emailBody = "Hello " + currentProfile.getFullName() + ",\n\nPlease find attached your structural tracking parameters spreadsheet document compiled dynamically from your dashboard data pipelines.";
 
-            // Dynamic secure dispatch via Brevo
+            // 3. EmailService aur Base64 wrapper engine ke throw mail transfer queue par lagayein
             emailService.sendEmailWithAttachment(targetRecipientEmail, emailSubject, emailBody, excelDataStream, fileName);
 
             return ResponseEntity.ok(Map.of("message", "Report file dispatched safely to " + targetRecipientEmail));
