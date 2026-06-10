@@ -18,7 +18,7 @@ import java.util.List;
 import java.util.Map;
 
 @RestController
-@RequestMapping("/api/v1.0")
+@RequestMapping("/api/v1.0/reports") // FIXED: Mapped to /reports to isolate and eliminate 404 routing conflicts
 @CrossOrigin(origins = "*")
 public class IncomeReportController {
 
@@ -36,7 +36,7 @@ public class IncomeReportController {
     }
 
     // Handles layout download button mapping trigger pipeline
-    @GetMapping("/incomes/report/download")
+    @GetMapping("/incomes/download") // Path structured clean: /api/v1.0/reports/incomes/download
     public ResponseEntity<InputStreamResource> downloadIncomeReport() {
         try {
             List<IncomeDTO> dataList = incomeService.getCurrentMonthIncomesForCurrentUser();
@@ -54,26 +54,21 @@ public class IncomeReportController {
     }
 
     // Handles the email submission button trigger endpoint pipeline
-    @PostMapping("/incomes/report/email")
+    @PostMapping("/incomes/email") // Path structured clean: /api/v1.0/reports/incomes/email
     public ResponseEntity<Map<String, String>> emailIncomeReport() {
         try {
-            // 1. Current logged-in user ka profile data nikalen
+            // Logged-in user data dynamically fetch karein
             ProfileEntity currentProfile = profileService.getCurrentProfile();
-
-            // 2. Us profile se dynamic email extract karein
             String targetRecipientEmail = currentProfile.getEmail();
 
-            // 3. Data aur excel sheet generate karein
             List<IncomeDTO> dataList = incomeService.getCurrentMonthIncomesForCurrentUser();
             ByteArrayInputStream excelDataStream = excelService.generateIncomeExcelReport(dataList);
 
             String fileName = "Income_Report_" + LocalDate.now() + ".xlsx";
             String emailSubject = "Financial Inflow Report Export Summary Matrix";
-
-            // FIXED: Changed getFullname() to getFullName() matching your Entity field definition
             String emailBody = "Hello " + currentProfile.getFullName() + ",\n\nPlease find attached your structural tracking parameters spreadsheet document compiled dynamically from your dashboard data pipelines.";
 
-            // 4. Dynamic email par send karein
+            // Dynamic secure dispatch via Brevo
             emailService.sendEmailWithAttachment(targetRecipientEmail, emailSubject, emailBody, excelDataStream, fileName);
 
             return ResponseEntity.ok(Map.of("message", "Report file dispatched safely to " + targetRecipientEmail));
