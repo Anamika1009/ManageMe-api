@@ -9,7 +9,7 @@ import com.manage.manageme.repository.ExpenseRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional; // Import Added
+import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -17,14 +17,14 @@ import java.util.List;
 
 @Service
 @RequiredArgsConstructor
-@Transactional(readOnly = true) // 1. Read operations ke liye database session open rakhega taaki Lazy collection crash na ho
+@Transactional(readOnly = true)
 public class ExpenseService {
     private final ExpenseRepository expenseRepository;
     private final CategoryService categoryService;
     private final CategoryRepository categoryRepository;
     private final ProfileService profileService;
 
-    @Transactional // 2. Write operation ke liye explicit transaction write access
+    @Transactional
     public ExpenseDTO addExpense(ExpenseDTO expenseDTO) {
         ProfileEntity profile = profileService.getCurrentProfile();
         CategoryEntity category = categoryRepository.findById(expenseDTO.getCategoryId())
@@ -34,7 +34,16 @@ public class ExpenseService {
         return toDTO(newExpense);
     }
 
+    // Retrieve ALL expenses for the current user (no month restriction —
+    // frontend's Quick Timeline Filter handles narrowing by month/year)
+    public List<ExpenseDTO> getAllExpensesForCurrentUser() {
+        ProfileEntity profile = profileService.getCurrentProfile();
+        List<ExpenseEntity> expenses = expenseRepository.findByProfileIdOrderByDateDesc(profile.getId());
+        return expenses.stream().map(this::toDTO).toList();
+    }
+
     // Retrieve all the expenses for the current month based on the start date and end date
+    // (kept for other callers, e.g. report/email generation)
     public List<ExpenseDTO> getCurrentMonthExpensesForCurrentUser() {
         ProfileEntity profile = profileService.getCurrentProfile();
         LocalDate now = LocalDate.now();
@@ -45,7 +54,7 @@ public class ExpenseService {
     }
 
     // Delete the expenses by id for the current user
-    @Transactional // 3. Delete/Write operation ke liye readOnly ko override kiya
+    @Transactional
     public void deleteExpense(Long expenseId){
         ProfileEntity profile = profileService.getCurrentProfile();
         ExpenseEntity entity = expenseRepository.findById(expenseId)

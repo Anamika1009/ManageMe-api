@@ -9,7 +9,7 @@ import com.manage.manageme.repository.IncomeRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional; // Import Added
+import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -17,14 +17,14 @@ import java.util.List;
 
 @Service
 @RequiredArgsConstructor
-@Transactional(readOnly = true) //
+@Transactional(readOnly = true)
 public class IncomeService {
     private final IncomeRepository incomeRepository;
     private final CategoryRepository categoryRepository;
     private final ProfileService profileService;
     private final CategoryService categoryService;
 
-    @Transactional // 2. Write operation hai,
+    @Transactional
     public IncomeDTO addIncome(IncomeDTO incomeDTO) {
         ProfileEntity profile = profileService.getCurrentProfile();
         CategoryEntity category = categoryRepository.findById(incomeDTO.getCategoryId())
@@ -34,14 +34,23 @@ public class IncomeService {
         return toDTO(newIncome);
     }
 
+    // Retrieve ALL incomes for the current user (no month restriction —
+    // frontend's Quick Timeline Filter handles narrowing by month/year)
+    public List<IncomeDTO> getAllIncomesForCurrentUser() {
+        ProfileEntity profile = profileService.getCurrentProfile();
+        List<IncomeEntity> incomes = incomeRepository.findByProfileIdOrderByDateDesc(profile.getId());
+        return incomes.stream().map(this::toDTO).toList();
+    }
+
     // Retrieve all the incomes for the current month based on the start date and end date
+    // (kept for other callers, e.g. report/email generation)
     public List<IncomeDTO> getCurrentMonthIncomesForCurrentUser() {
         ProfileEntity profile = profileService.getCurrentProfile();
         LocalDate now = LocalDate.now();
         LocalDate startOfMonth = now.withDayOfMonth(1);
         LocalDate endOfMonth = now.withDayOfMonth(now.lengthOfMonth());
         List<IncomeEntity> incomes = incomeRepository.findByProfileIdAndDateBetween(profile.getId(), startOfMonth, endOfMonth);
-        return incomes.stream().map(this::toDTO).toList(); //
+        return incomes.stream().map(this::toDTO).toList();
     }
 
     // Delete the income by id for the current user
@@ -99,7 +108,7 @@ public class IncomeService {
                 .createdAt(incomeEntity.getCreatedAt())
                 .updatedAt(incomeEntity.getUpdatedAt())
                 .categoryId(incomeEntity.getCategory() != null ? incomeEntity.getCategory().getId() : null)
-                .categoryName(incomeEntity.getCategory() != null ? incomeEntity.getCategory().getName() : "N/A") // Is safe now
+                .categoryName(incomeEntity.getCategory() != null ? incomeEntity.getCategory().getName() : "N/A")
                 .build();
     }
 }

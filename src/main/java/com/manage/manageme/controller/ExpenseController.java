@@ -1,6 +1,5 @@
 package com.manage.manageme.controller;
 
-
 import com.manage.manageme.dto.ExpenseDTO;
 import com.manage.manageme.service.ExpenseService;
 import lombok.RequiredArgsConstructor;
@@ -15,16 +14,17 @@ import java.util.List;
 @RequestMapping("/expenses")
 public class ExpenseController {
     private final ExpenseService expenseService;
+
     @PostMapping
     public ResponseEntity<ExpenseDTO> addExpense(@RequestBody ExpenseDTO expenseDTO) {
         ExpenseDTO saved = expenseService.addExpense(expenseDTO);
         return ResponseEntity.status(HttpStatus.CREATED).body(saved);
     }
 
-    // Controller for the getCurrentMonthExpensesForCurrentUser
+    // Returns ALL expenses for the current user; frontend filters by month/year/search
     @GetMapping
     public ResponseEntity<List<ExpenseDTO>> getExpenses(){
-        List<ExpenseDTO> expenses = expenseService.getCurrentMonthExpensesForCurrentUser();
+        List<ExpenseDTO> expenses = expenseService.getAllExpensesForCurrentUser();
         return ResponseEntity.status(HttpStatus.OK).body(expenses);
     }
 
