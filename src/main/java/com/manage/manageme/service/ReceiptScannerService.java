@@ -12,6 +12,7 @@ import java.util.Map;
 @Service
 public class ReceiptScannerService {
 
+    // Aapne placeholder ka naam change nahi kiya, isliye hum yahi use kar rahe hain
     @Value("${gemini.api.key}")
     private String apiKey;
 
@@ -25,11 +26,11 @@ public class ReceiptScannerService {
         String url = "https://api.groq.com/openai/v1/chat/completions";
 
         // 3. Prompt for JSON extraction
-        String prompt = "Extract details from this receipt in valid JSON matching these exact keys: amount (number), merchant (string), date (YYYY-MM-DD), category (string - choose from Food, Shopping, Transport, Bills, Misc). Do not include markdown or backticks.";
+        String prompt = "Extract details from this receipt in valid JSON strictly matching these keys: amount (number), merchant (string), date (YYYY-MM-DD), category (string - choose from Food, Shopping, Transport, Bills, Misc). Do not include markdown or backticks.";
 
-        // 4. Build Request Body natively supporting Groq/OpenAI JSON schema
+        // 4. Build Request Body for Groq Vision Model
         Map<String, Object> requestBody = Map.of(
-            "model", "qwen/qwen3.6-27b",
+            "model", "llama-3.2-11b-vision-preview", // Groq's official vision model
             "response_format", Map.of("type", "json_object"),
             "messages", List.of(
                 Map.of(
@@ -49,7 +50,9 @@ public class ReceiptScannerService {
         RestTemplate restTemplate = new RestTemplate();
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
-        headers.setBearerAuth(apiKey); 
+        
+        // .trim() is added here to remove any hidden spaces/newlines from your API key!
+        headers.setBearerAuth(apiKey.trim()); 
         
         ResponseEntity<Map> response = restTemplate.postForEntity(url, new HttpEntity<>(requestBody, headers), Map.class);
         
