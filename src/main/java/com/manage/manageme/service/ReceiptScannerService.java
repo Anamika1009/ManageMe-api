@@ -17,7 +17,7 @@ public class ReceiptScannerService {
 
     public String scanReceipt(MultipartFile file) throws Exception {
         String base64Image = Base64.getEncoder().encodeToString(file.getBytes());
-        String url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=" + apiKey;
+        String url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=" + apiKey;
 
         String prompt = "Extract details from this receipt in valid JSON strictly matching keys: amount(number), merchant(string), date(YYYY-MM-DD), category(string). Do not include markdown or backticks.";
 
