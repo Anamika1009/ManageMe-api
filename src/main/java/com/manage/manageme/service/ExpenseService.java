@@ -27,6 +27,11 @@ public class ExpenseService {
     @Transactional
     public ExpenseDTO addExpense(ExpenseDTO expenseDTO) {
         ProfileEntity profile = profileService.getCurrentProfile();
+
+        if (expenseDTO.getCategoryId() == null) {
+            throw new RuntimeException("Please select a category before submitting.");
+        }
+
         CategoryEntity category = categoryRepository.findById(expenseDTO.getCategoryId())
                 .orElseThrow(() -> new RuntimeException("Category not found"));
         ExpenseEntity newExpense = toEntity(expenseDTO, profile, category);

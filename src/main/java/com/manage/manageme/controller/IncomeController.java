@@ -8,6 +8,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequiredArgsConstructor
@@ -16,9 +17,14 @@ public class IncomeController {
     private final IncomeService incomeService;
 
     @PostMapping
-    public ResponseEntity<IncomeDTO> addExpense(@RequestBody IncomeDTO incomeDTO) {
-        IncomeDTO saved = incomeService.addIncome(incomeDTO);
-        return ResponseEntity.status(HttpStatus.CREATED).body(saved);
+    public ResponseEntity<?> addExpense(@RequestBody IncomeDTO incomeDTO) {
+        try {
+            IncomeDTO saved = incomeService.addIncome(incomeDTO);
+            return ResponseEntity.status(HttpStatus.CREATED).body(saved);
+        } catch (Exception e) {
+            String message = (e.getMessage() != null) ? e.getMessage() : "Failed to add income.";
+            return ResponseEntity.badRequest().body(Map.of("message", message));
+        }
     }
 
     // Returns ALL incomes for the current user; frontend filters by month/year/search

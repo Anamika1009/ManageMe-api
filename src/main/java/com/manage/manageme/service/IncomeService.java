@@ -27,6 +27,11 @@ public class IncomeService {
     @Transactional
     public IncomeDTO addIncome(IncomeDTO incomeDTO) {
         ProfileEntity profile = profileService.getCurrentProfile();
+
+        if (incomeDTO.getCategoryId() == null) {
+            throw new RuntimeException("Please select a category before submitting.");
+        }
+
         CategoryEntity category = categoryRepository.findById(incomeDTO.getCategoryId())
                 .orElseThrow(() -> new RuntimeException("Category not found"));
         IncomeEntity newIncome = toEntity(incomeDTO, profile, category);
