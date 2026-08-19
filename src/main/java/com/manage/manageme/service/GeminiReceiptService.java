@@ -18,16 +18,24 @@ import java.util.Base64;
 import java.util.List;
 import java.util.Map;
 
+// NOTE: Despite the class/property name saying "Gemini", this actually calls
+// Groq's OpenAI-compatible chat completions API. The property key was kept as
+// gemini.api.key so no Render/env var changes were needed — it just holds a
+// Groq key instead. Rename both when convenient; functionally this is fine.
 @Service
 public class GeminiReceiptService {
 
-    // Set this in application.properties as: gemini.api.key=${GEMINI_API_KEY}
-    // and set the GEMINI_API_KEY env var locally + on Render. Never hardcode the key here.
-    @Value("${gemini.api.key}")
-    private String geminiApiKey;
+    // Set this in application.properties as: groq.api.key=${GROQ_API_KEY}
+    // The env var itself should hold your actual GROQ key.
+    @Value("${groq.api.key}")
+    private String groqApiKey;
 
-    private static final String GEMINI_URL =
-            "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent";
+    private static final String GROQ_URL = "https://api.groq.com/openai/v1/chat/completions";
+
+    // Groq's current documented vision-capable model. If Groq deprecates this,
+    // check https://console.groq.com/docs/models for the current vision model
+    // and swap the value below.
+    private static final String VISION_MODEL = "qwen/qwen3.6-27b";
 
     private final RestTemplate restTemplate = new RestTemplate();
     private final ObjectMapper objectMapper = new ObjectMapper();
@@ -69,7 +77,7 @@ public class GeminiReceiptService {
         headers.setContentType(MediaType.APPLICATION_JSON);
         HttpEntity<Map<String, Object>> entity = new HttpEntity<>(requestBody, headers);
 
-        String url = GEMINI_URL + "?key=" + geminiApiKey;
+        String url = GROQ_URL + "?key=" + groqApiKey;
         ResponseEntity<String> response = restTemplate.postForEntity(url, entity, String.class);
 
         return parseGeminiResponse(response.getBody());
