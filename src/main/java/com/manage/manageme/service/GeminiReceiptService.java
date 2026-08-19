@@ -18,15 +18,12 @@ import java.util.Base64;
 import java.util.List;
 import java.util.Map;
 
-// NOTE: Despite the class/property name saying "Gemini", this actually calls
-// Groq's OpenAI-compatible chat completions API. The property key was kept as
-// gemini.api.key so no Render/env var changes were needed — it just holds a
-// Groq key instead. Rename both when convenient; functionally this is fine.
+// Calls Groq's OpenAI-compatible chat completions API (vision model) to
+// read a receipt image and extract structured expense data from it.
 @Service
 public class GeminiReceiptService {
 
-    // Set this in application.properties as: groq.api.key=${GROQ_API_KEY}
-    // The env var itself should hold your actual GROQ key.
+    // Set in application.properties as: groq.api.key=${GROQ_API_KEY}
     @Value("${groq.api.key}")
     private String groqApiKey;
 
@@ -60,34 +57,38 @@ public class GeminiReceiptService {
     public ReceiptScanResponseDTO scanReceipt(MultipartFile file) throws IOException {
         String base64Image = Base64.getEncoder().encodeToString(file.getBytes());
         String mimeType = (file.getContentType() != null) ? file.getContentType() : "image/jpeg";
+        String dataUri = "data:" + mimeType + ";base64," + base64Image;
 
         Map<String, Object> requestBody = Map.of(
-                "contents", List.of(
-                        Map.of("parts", List.of(
-                                Map.of("text", PROMPT),
-                                Map.of("inline_data", Map.of(
-                                        "mime_type", mimeType,
-                                        "data", base64Image
-                                ))
-                        ))
-                )
+                "model", VISION_MODEL,
+                "messages", List.of(
+                        Map.of(
+                                "role", "user",
+                                "content", List.of(
+                                        Map.of("type", "text", "text", PROMPT),
+                                        Map.of("type", "image_url", "image_url", Map.of("url", dataUri))
+                                )
+                        )
+                ),
+                "temperature", 0.2,
+                "response_format", Map.of("type", "json_object")
         );
 
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
+        headers.setBearerAuth(groqApiKey);
         HttpEntity<Map<String, Object>> entity = new HttpEntity<>(requestBody, headers);
 
-        String url = GROQ_URL + "?key=" + groqApiKey;
-        ResponseEntity<String> response = restTemplate.postForEntity(url, entity, String.class);
+        ResponseEntity<String> response = restTemplate.postForEntity(GROQ_URL, entity, String.class);
 
-        return parseGeminiResponse(response.getBody());
+        return parseGroqResponse(response.getBody());
     }
 
-    private ReceiptScanResponseDTO parseGeminiResponse(String rawResponse) throws IOException {
+    private ReceiptScanResponseDTO parseGroqResponse(String rawResponse) throws IOException {
         JsonNode root = objectMapper.readTree(rawResponse);
-        String text = root.path("candidates").get(0).path("content").path("parts").get(0).path("text").asText();
+        String text = root.path("choices").get(0).path("message").path("content").asText();
 
-        // Gemini sometimes wraps JSON in ```json ... ``` — strip that if present
+        // Strip markdown code fences in case the model wraps the JSON anyway
         text = text.trim();
         if (text.startsWith("```")) {
             text = text.replaceAll("^```json", "")
