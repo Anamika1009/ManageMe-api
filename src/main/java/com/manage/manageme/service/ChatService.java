@@ -14,6 +14,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.*;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.client.RestTemplate;
 
 import java.math.BigDecimal;
@@ -51,27 +52,52 @@ public class ChatService {
     }
 
     public List<ChatMessage> getMessagesForThread(Long threadId) {
+        ProfileEntity profile = profileService.getCurrentProfile();
+        ChatThread thread = chatThreadRepository.findById(threadId)
+                .orElseThrow(() -> new RuntimeException("Thread not found"));
+        
+        // Security validation to prevent cross-profile data access
+        if (!thread.getProfileId().equals(profile.getId())) {
+            throw new RuntimeException("Unauthorized access to this chat session");
+        }
+
         return chatMessageRepository.findByThreadIdOrderByCreatedAtAsc(threadId);
+    }
+
+    @Transactional
+    public void deleteThread(Long threadId) {
+        ProfileEntity profile = profileService.getCurrentProfile();
+        ChatThread thread = chatThreadRepository.findById(threadId)
+                .orElseThrow(() -> new RuntimeException("Thread not found"));
+        
+        if (!thread.getProfileId().equals(profile.getId())) {
+            throw new RuntimeException("Unauthorized to delete this thread");
+        }
+
+        chatMessageRepository.deleteByThreadId(threadId);
+        chatThreadRepository.delete(thread);
     }
 
     public ChatResponse processUserMessage(Long threadId, String userMessage) throws Exception {
         ProfileEntity profile = profileService.getCurrentProfile();
         Long currentProfileId = profile.getId();
         
-        // Ensure thread exists and belongs to user
         ChatThread thread = chatThreadRepository.findById(threadId)
                 .orElseThrow(() -> new RuntimeException("Thread not found"));
 
-        // 1. Save incoming user message to DB (with profileId)
+        // Security validation
+        if (!thread.getProfileId().equals(currentProfileId)) {
+            throw new RuntimeException("Unauthorized access to this chat session");
+        }
+
         ChatMessage userDbMsg = ChatMessage.builder()
                 .threadId(threadId)
-                .profileId(currentProfileId) // Fix for NOT NULL constraint
+                .profileId(currentProfileId)
                 .role("user")
                 .content(userMessage)
                 .build();
         chatMessageRepository.save(userDbMsg);
 
-        // 2. Fetch context
         List<CategoryDTO> categories = categoryService.getCategoriesForCurrentProfile();
         String categoriesList = categories.stream()
             .map(category -> category.getName() + " (" + category.getType() + ")")
@@ -91,7 +117,6 @@ public class ChatService {
                 "3. DATE PARSING: Extract transaction date if mentioned (e.g., 'yesterday', '2026-08-15'). Format as 'YYYY-MM-DD'. Default to today (" + LocalDate.now() + ").\n" +
                 "4. Keep replies conversational and short (1-2 sentences).";
 
-        // 3. Load thread history from DB
         List<Map<String, Object>> messages = new ArrayList<>();
         messages.add(Map.of("role", "system", "content", systemPrompt));
         
@@ -100,7 +125,6 @@ public class ChatService {
             messages.add(Map.of("role", msg.getRole(), "content", msg.getContent()));
         }
 
-        // 4. Define Tools
         Map<String, Object> logExpenseTool = Map.of(
             "type", "function",
             "function", Map.of(
@@ -223,10 +247,9 @@ public class ChatService {
             assistantReply = (String) message.get("content");
         }
 
-        // 5. Save assistant reply to DB (with profileId)
         ChatMessage assistantDbMsg = ChatMessage.builder()
                 .threadId(threadId)
-                .profileId(currentProfileId) // Fix for NOT NULL constraint
+                .profileId(currentProfileId)
                 .role("assistant")
                 .content(assistantReply)
                 .build();

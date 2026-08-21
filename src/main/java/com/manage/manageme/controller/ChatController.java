@@ -4,13 +4,14 @@ import com.manage.manageme.dto.ChatDTOs.*;
 import com.manage.manageme.entity.ChatMessage;
 import com.manage.manageme.entity.ChatThread;
 import com.manage.manageme.service.ChatService;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
 @RestController
-@RequestMapping("/chat")
+@RequestMapping("/api/v1.0/chat")
 @CrossOrigin(origins = "*")
 public class ChatController {
 
@@ -20,25 +21,31 @@ public class ChatController {
         this.chatService = chatService;
     }
 
-    // 1. Get all chat threads for the current user (ChatGPT style history sidebar)
     @GetMapping("/threads")
     public ResponseEntity<List<ChatThread>> getThreads() {
         return ResponseEntity.ok(chatService.getThreadsForCurrentUser());
     }
 
-    // 2. Get messages for a specific chat thread
     @GetMapping("/thread/{threadId}")
     public ResponseEntity<List<ChatMessage>> getMessages(@PathVariable Long threadId) {
         return ResponseEntity.ok(chatService.getMessagesForThread(threadId));
     }
 
-    // 3. Create a new chat thread
     @PostMapping("/thread")
     public ResponseEntity<ChatThread> createThread(@RequestParam(required = false) String title) {
         return ResponseEntity.ok(chatService.createNewThread(title));
     }
 
-    // 4. Send a message to a specific chat thread
+    @DeleteMapping("/thread/{threadId}")
+    public ResponseEntity<Void> deleteThread(@PathVariable Long threadId) {
+        try {
+            chatService.deleteThread(threadId);
+            return ResponseEntity.ok().build();
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+        }
+    }
+
     @PostMapping("/thread/{threadId}")
     public ResponseEntity<ChatResponse> processChat(
             @PathVariable Long threadId, 
