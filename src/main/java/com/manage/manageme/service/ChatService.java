@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.manage.manageme.dto.ChatDTOs.*;
 import com.manage.manageme.dto.CategoryDTO;
 import com.manage.manageme.dto.ExpenseDTO;
+import com.manage.manageme.dto.IncomeDTO;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.*;
 import org.springframework.stereotype.Service;
@@ -21,10 +22,12 @@ public class ChatService {
 
     private final CategoryService categoryService;
     private final ExpenseService expenseService;
+    private final IncomeService incomeService;
 
-    public ChatService(CategoryService categoryService, ExpenseService expenseService) {
+    public ChatService(CategoryService categoryService, ExpenseService expenseService, IncomeService incomeService) {
         this.categoryService = categoryService;
         this.expenseService = expenseService;
+        this.incomeService = incomeService;
     }
     
     public ChatResponse processUserMessage(String userMessage, List<Map<String, String>> history) throws Exception {
@@ -36,16 +39,19 @@ public class ChatService {
             .reduce((left, right) -> left + ", " + right)
             .orElse("No categories available");
         String totalExpense = expenseService.getTotalExpenseForCurrentUser().toPlainString();
+        String totalIncome = incomeService.getTotalIncomeForCurrentUser().toPlainString();
         
         // 2. Build System Prompt
-        String systemPrompt = "You are a financial assistant embedded in an expense tracking app.\n" +
+        String systemPrompt = "You are a financial assistant embedded in an income and expense tracking app.\n" +
                 "The user's existing categories are: " + categoriesList + "\n" +
                 "This month's total expenses: $" + totalExpense + "\n" +
+            "This month's total income: $" + totalIncome + "\n" +
                 "Today's date is: " + LocalDate.now() + "\n" +
                 "Your job:\n" +
                 "1. If the user describes spending money, call the 'log_expense' function.\n" +
-                "2. If they ask about spending, answer using ONLY the data provided above.\n" +
-                "3. Keep replies conversational and short (1-2 sentences).";
+            "2. If the user describes receiving or earning money, call the 'log_income' function.\n" +
+            "3. If they ask about spending or income, answer using ONLY the data provided above.\n" +
+            "4. Keep replies conversational and short (1-2 sentences).";
 
         // 3. Prepare Messages Array
         List<Map<String, Object>> messages = new ArrayList<>();
@@ -76,11 +82,28 @@ public class ChatService {
             )
         );
 
+        Map<String, Object> logIncomeTool = Map.of(
+            "type", "function",
+            "function", Map.of(
+                "name", "log_income",
+                "description", "Log money received or earned when the user describes income",
+                "parameters", Map.of(
+                    "type", "object",
+                    "properties", Map.of(
+                        "name", Map.of("type", "string", "description", "What the money was received for (e.g. Salary, Freelance)"),
+                        "amount", Map.of("type", "number", "description", "Amount received"),
+                        "category", Map.of("type", "string", "description", "Best matching income category from the user's list")
+                    ),
+                    "required", List.of("name", "amount", "category")
+                )
+            )
+        );
+
         // 5. Build Groq Payload
         Map<String, Object> requestBody = Map.of(
             "model", "qwen/qwen3.6-27b", // Best Groq model for function calling
             "messages", messages,
-            "tools", List.of(logExpenseTool),
+            "tools", List.of(logExpenseTool, logIncomeTool),
             "tool_choice", "auto"
         );
 
@@ -138,6 +161,42 @@ public class ChatService {
                         "amount", savedExpense.getAmount(),
                         "category", savedExpense.getCategoryName(),
                         "date", savedExpense.getDate()
+                    ))
+                );
+            }
+
+            if ("log_income".equals(function.get("name"))) {
+                String argsJson = (String) function.get("arguments");
+                ObjectMapper mapper = new ObjectMapper();
+                Map<String, Object> args = mapper.readValue(argsJson, Map.class);
+
+                String categoryName = String.valueOf(args.get("category"));
+                CategoryDTO category = categories.stream()
+                    .filter(item -> item.getName() != null
+                        && item.getName().equalsIgnoreCase(categoryName)
+                        && "income".equalsIgnoreCase(item.getType()))
+                    .findFirst()
+                    .orElseThrow(() -> new IllegalArgumentException(
+                        "No matching income category found for: " + categoryName));
+
+                IncomeDTO income = IncomeDTO.builder()
+                    .name(String.valueOf(args.get("name")))
+                    .amount(new BigDecimal(String.valueOf(args.get("amount"))))
+                    .categoryId(category.getId())
+                    .categoryName(category.getName())
+                    .icon("💰")
+                    .date(LocalDate.now())
+                    .build();
+                IncomeDTO savedIncome = incomeService.addIncome(income);
+
+                return new ChatResponse(
+                    "Got it! I've logged $" + savedIncome.getAmount() + " received for " + savedIncome.getName() + ".",
+                    new ChatAction("INCOME_LOGGED", Map.of(
+                        "id", savedIncome.getId(),
+                        "name", savedIncome.getName(),
+                        "amount", savedIncome.getAmount(),
+                        "category", savedIncome.getCategoryName(),
+                        "date", savedIncome.getDate()
                     ))
                 );
             }
