@@ -56,14 +56,16 @@ public class ChatService {
 
     public ChatResponse processUserMessage(Long threadId, String userMessage) throws Exception {
         ProfileEntity profile = profileService.getCurrentProfile();
+        Long currentProfileId = profile.getId();
         
         // Ensure thread exists and belongs to user
         ChatThread thread = chatThreadRepository.findById(threadId)
                 .orElseThrow(() -> new RuntimeException("Thread not found"));
 
-        // 1. Save incoming user message to DB
+        // 1. Save incoming user message to DB (with profileId)
         ChatMessage userDbMsg = ChatMessage.builder()
                 .threadId(threadId)
+                .profileId(currentProfileId) // Fix for NOT NULL constraint
                 .role("user")
                 .content(userMessage)
                 .build();
@@ -78,7 +80,7 @@ public class ChatService {
         String totalExpense = expenseService.getTotalExpenseForCurrentUser().toPlainString();
         String totalIncome = incomeService.getTotalIncomeForCurrentUser().toPlainString();
         
-        String systemPrompt = "You are a friendly financial assistant embedded in ManageMe, an income and expense tracking app.\n" +
+        String systemPrompt = "You are Penny, a friendly financial assistant embedded in ManageMe, an income and expense tracking app.\n" +
                 "The user's existing categories are: " + categoriesList + "\n" +
                 "This month's total expenses: $" + totalExpense + "\n" +
                 "This month's total income: $" + totalIncome + "\n" +
@@ -221,9 +223,10 @@ public class ChatService {
             assistantReply = (String) message.get("content");
         }
 
-        // 5. Save assistant reply to DB
+        // 5. Save assistant reply to DB (with profileId)
         ChatMessage assistantDbMsg = ChatMessage.builder()
                 .threadId(threadId)
+                .profileId(currentProfileId) // Fix for NOT NULL constraint
                 .role("assistant")
                 .content(assistantReply)
                 .build();

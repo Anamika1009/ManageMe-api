@@ -17,6 +17,9 @@ public class ChatMessage {
     private Long threadId;
 
     @Column(nullable = false)
+    private Long profileId; // <--- Yeh field add karna zaroori hai!
+
+    @Column(nullable = false)
     private String role; // "user" or "assistant"
 
     @Column(columnDefinition = "TEXT", nullable = false)
