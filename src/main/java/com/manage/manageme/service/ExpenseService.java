@@ -58,6 +58,10 @@ public class ExpenseService {
         return expenses.stream().map(this::toDTO).toList();
     }
 
+    public List<ExpenseDTO> getCurrentMonthExpensesForUserForReport() {
+        return getCurrentMonthExpensesForCurrentUser();
+    }
+
     // Delete the expenses by id for the current user
     @Transactional
     public void deleteExpense(Long expenseId){

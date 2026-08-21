@@ -1,6 +1,7 @@
 package com.manage.manageme.service;
 
 import com.manage.manageme.dto.IncomeDTO;
+import com.manage.manageme.dto.ExpenseDTO;
 import org.apache.poi.ss.usermodel.*;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.springframework.stereotype.Service;
@@ -12,6 +13,54 @@ import java.util.List;
 
 @Service
 public class ExcelService {
+
+    public ByteArrayInputStream generateExpenseExcelReport(List<ExpenseDTO> expenses) {
+        try (Workbook workbook = new XSSFWorkbook(); ByteArrayOutputStream out = new ByteArrayOutputStream()) {
+            Sheet sheet = workbook.createSheet("Outflows Summary Matrix");
+
+            Font headerFont = workbook.createFont();
+            headerFont.setBold(true);
+            headerFont.setColor(IndexedColors.WHITE.getIndex());
+
+            CellStyle headerStyle = workbook.createCellStyle();
+            headerStyle.setFont(headerFont);
+            headerStyle.setFillForegroundColor(IndexedColors.CORNFLOWER_BLUE.getIndex());
+            headerStyle.setFillPattern(FillPatternType.SOLID_FOREGROUND);
+
+            String[] columns = {"ID", "Outlet Title", "Category Name", "Log Date", "Amount ($)"};
+            Row headerRow = sheet.createRow(0);
+            for (int i = 0; i < columns.length; i++) {
+                Cell cell = headerRow.createCell(i);
+                cell.setCellValue(columns[i]);
+                cell.setCellStyle(headerStyle);
+            }
+
+            CellStyle decimalCurrencyStyle = workbook.createCellStyle();
+            decimalCurrencyStyle.setDataFormat(workbook.createDataFormat().getFormat("$#,##0.00"));
+
+            int dynamicRowTracker = 1;
+            for (ExpenseDTO expense : expenses) {
+                Row row = sheet.createRow(dynamicRowTracker++);
+                row.createCell(0).setCellValue(expense.getId() != null ? expense.getId() : 0);
+                row.createCell(1).setCellValue(expense.getName());
+                row.createCell(2).setCellValue(expense.getCategoryName() != null ? expense.getCategoryName() : "Uncategorized");
+                row.createCell(3).setCellValue(expense.getDate() != null ? expense.getDate().toString() : "");
+
+                Cell amountValueCell = row.createCell(4);
+                amountValueCell.setCellValue(expense.getAmount() != null ? expense.getAmount().doubleValue() : 0.00);
+                amountValueCell.setCellStyle(decimalCurrencyStyle);
+            }
+
+            for (int i = 0; i < columns.length; i++) {
+                sheet.autoSizeColumn(i);
+            }
+
+            workbook.write(out);
+            return new ByteArrayInputStream(out.toByteArray());
+        } catch (IOException e) {
+            throw new RuntimeException("Failed to construct Excel expense report: " + e.getMessage(), e);
+        }
+    }
 
     public ByteArrayInputStream generateIncomeExcelReport(List<IncomeDTO> incomes) {
         try (Workbook workbook = new XSSFWorkbook(); ByteArrayOutputStream out = new ByteArrayOutputStream()) {
