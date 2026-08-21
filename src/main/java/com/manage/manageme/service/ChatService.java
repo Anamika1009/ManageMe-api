@@ -78,7 +78,7 @@ public class ChatService {
 
         // 5. Build Groq Payload
         Map<String, Object> requestBody = Map.of(
-            "model", "llama-3.3-70b-versatile", // Best Groq model for function calling
+            "model", "qwen/qwen3.6-27b", // Best Groq model for function calling
             "messages", messages,
             "tools", List.of(logExpenseTool),
             "tool_choice", "auto"
