@@ -16,7 +16,7 @@ import java.util.*;
 @Service
 public class ChatService {
 
-    @Value("${gemini.api.key}") // Using the same Groq key placeholder
+    @Value("${groq.api.key}") // Using the same Groq key placeholder
     private String apiKey;
 
     private final CategoryService categoryService;
