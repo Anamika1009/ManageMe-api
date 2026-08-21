@@ -5,6 +5,9 @@ import com.manage.manageme.dto.ChatDTOs.*;
 import com.manage.manageme.dto.CategoryDTO;
 import com.manage.manageme.dto.ExpenseDTO;
 import com.manage.manageme.dto.IncomeDTO;
+import com.manage.manageme.entity.ChatMessage;
+import com.manage.manageme.entity.ProfileEntity;
+import com.manage.manageme.repository.ChatMessageRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.*;
@@ -26,6 +29,13 @@ public class ChatService {
     private final CategoryService categoryService;
     private final ExpenseService expenseService;
     private final IncomeService incomeService;
+    private final ProfileService profileService;
+    private final ChatMessageRepository chatMessageRepository;
+
+    public List<ChatMessage> getChatHistoryForCurrentUser() {
+        ProfileEntity profile = profileService.getCurrentProfile();
+        return chatMessageRepository.findByProfileIdOrderByCreatedAtAsc(profile.getId());
+    }
 
     public ChatResponse processUserMessage(String userMessage, List<Map<String, String>> history) throws Exception {
         
