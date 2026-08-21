@@ -5,22 +5,18 @@ import lombok.*;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "tbl_chat_messages")
+@Table(name = "tbl_chat_threads")
 @Getter @Setter @NoArgsConstructor @AllArgsConstructor @Builder
-public class ChatMessage {
+public class ChatThread {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
     @Column(nullable = false)
-    private Long threadId;
+    private Long profileId;
 
-    @Column(nullable = false)
-    private String role; // "user" or "assistant"
-
-    @Column(columnDefinition = "TEXT", nullable = false)
-    private String content;
+    private String title; // e.g. "Expense Logging Session"
 
     private LocalDateTime createdAt;
 
