@@ -1,25 +1,19 @@
 package com.manage.manageme.controller;
 
 import com.manage.manageme.dto.ChatDTOs.*;
-import com.manage.manageme.entity.ChatMessage;
 import com.manage.manageme.service.ChatService;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-
-import java.util.List; 
 
 @RestController
 @RequestMapping("/api/v1.0/chat")
 @CrossOrigin(origins = "*")
 public class ChatController {
 
-    @Autowired
-    private ChatService chatService;
+    private final ChatService chatService;
 
-    @GetMapping("/history")
-    public ResponseEntity<List<ChatMessage>> getHistory() {
-        return ResponseEntity.ok(chatService.getChatHistoryForCurrentUser());
+    public ChatController(ChatService chatService) {
+        this.chatService = chatService;
     }
 
     @PostMapping
